@@ -32,7 +32,8 @@ def tokenize_labeled_test_file(fname, label_fname):
     """
     split_fname = fname.split('/')
     new_fname = '/'.join([el if idx != len(split_fname) - 1 else 'parsed_' + el for idx, el in enumerate(split_fname)])
-    if os.path.exists(new_fname): return new_fname
+    label_map_fname = '/'.join([el if idx != len(split_fname) - 1 else 'label_map.txt' for idx, el in enumerate(split_fname)])
+    if os.path.exists(new_fname): return label_map_fname, new_fname
 
     with open(fname, 'r', encoding='utf8') as f1, open(label_fname, 'r', encoding='utf8') as f2:
         ls1, ls2 = f1.readlines(), f2.readlines()
@@ -58,6 +59,9 @@ def tokenize_labeled_test_file(fname, label_fname):
     for idx, label in enumerate(label_text):
         print('{}: {}'.format(label, idx))
         label_map[label] = idx
+    with open(label_map_fname, 'w') as f:
+        for key,val in label_map.items():
+            f.write("{} ||| {}".format(key, val))
 
     for idx, data in enumerate(parsed_data):
         labels = ls2[idx].strip().split()
@@ -66,9 +70,8 @@ def tokenize_labeled_test_file(fname, label_fname):
         for label in labels:
             parsed_data[idx].insert(0, str(label_map[label]))
 
-
     save_file(parsed_data, new_fname)
-    return label_map, new_fname
+    return label_map_fname, new_fname
 
 
 def build_vocab(parsed_train_fname, vocab_file, vocab_size=30000):
@@ -148,7 +151,7 @@ def main():
     vocab_fname = './data/vocab.txt'
 
     parsed_train_fname = tokenize_train_file(train_fname)
-    parsed_test_fname = tokenize_labeled_test_file(test_fname, test_label_fname)
+    label_map, parsed_test_fname = tokenize_labeled_test_file(test_fname, test_label_fname)
     build_vocab(parsed_train_fname, vocab_fname)
 
     make_binary_dataset(parsed_train_fname, False)
