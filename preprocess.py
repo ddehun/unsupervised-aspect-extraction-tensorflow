@@ -90,8 +90,10 @@ def build_vocab(parsed_train_fname, vocab_file, vocab_size=30000):
         ls = f.readlines()
         tokens = [tok for line in ls for tok in line.strip().split()]
     counts = collections.Counter(tokens)
-    vocab = sorted(counts, key=lambda x: -counts[x])[:vocab_size-1]
+    vocab = sorted(counts, key=lambda x: -counts[x])[:vocab_size - 2]
     vocab.append('<UNK>')
+    vocab.append('<PAD>')
+
     assert all([isinstance(tok, str) for tok in vocab])
     with open(vocab_file, 'w') as f:
         f.write('\n'.join([tok for tok in vocab]))

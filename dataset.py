@@ -11,28 +11,32 @@ def read_bin_generator(fname, single_pass=False):
     If single_pass is True, Iterating for dataset is done only once.
     """
     while True:
-        with open(fname, 'rb') as f:
-            len_bytes = f.read(8)
+        reader = open(fname, 'rb')
+        while True:
+            len_bytes = reader.read(8)
+            if not len_bytes: break
             str_len = struct.unpack('q', len_bytes)[0]
-            example_str = struct.unpack('%ds' % str_len, f.read(str_len))[0]
+            example_str = struct.unpack('%ds' % str_len, reader.read(str_len))[0]
             yield example_pb2.Example.FromString(example_str)
-        if single_pass:
-            break
+            if single_pass:
+                break
 
 class Vocab:
     def __init__(self, vocab_fname):
-        self.word2id, self.id2word = self.build_ids(vocab_fname)
+        self.word2id, self.id2word, self.words = self.build_ids(vocab_fname)
         self.unk_tok_id = self.word2id['<UNK>']
-        self.words = list(self.word2id.keys())
+        self.pad_tok_id = self.word2id['<PAD>']
 
     def build_ids(self, vocab_fname):
         w2i, i2w = dict(), dict()
+        words = []
         with open(vocab_fname, 'r', encoding='utf8') as f:
             ls = [line.strip() for line in f.readlines()]
             for idx, line in enumerate(ls):
+                words.append(line)
                 w2i[line] = idx
                 i2w[idx] = line
-        return w2i, i2w
+        return w2i, i2w, words
 
 
 class Batcher:
@@ -40,33 +44,55 @@ class Batcher:
         self.hparams = hparams
         self.vocab = vocab
         self.train_gen = read_bin_generator(self.hparams.train_bin_fname)
-        self.test_gen = read_bin_generator(self.hparams.test)
+        self.test_gen = read_bin_generator(self.hparams.test_bin_fname)
 
     def pack_one_sample(self, review_txt, label_txt):
-        assert isinstance(review_txt, str) and isinstance(label_txt, str)
+        assert isinstance(review_txt, str) and (isinstance(label_txt, str) or label_txt is None)
         review_toks = review_txt.split()
-        review_ids = np.asarray([self.vocab.word2id[tok] if tok in self.vocab.words else self.vocab.unk_tok_id for tok in review_toks])
-        if len(review_ids) > self.hparams.max_length: review_ids = review_ids[:self.hparams.max_length]
+        review_ids = [self.vocab.word2id[tok] if tok in self.vocab.words else self.vocab.unk_tok_id for tok in review_toks]
+        if len(review_ids) > self.hparams.max_text_len: review_ids = review_ids[:self.hparams.max_text_len]
+
+        review_pad = [1 for i in range(len(review_ids))]
+        review_len = len(review_ids)
+
+        while len(review_ids) != self.hparams.max_text_len:
+            review_ids.append(self.vocab.pad_tok_id)
+            review_pad.append(0)
+
         labels = [int(label) for label in label_txt.strip().split()] if label_txt is not None else []
         labels = np.asarray(labels)
-        return review_ids, labels
+        return review_ids, labels, review_pad, review_len
 
     def next_data(self):
         samples = []
+        sample_pads = []
+        sample_lens = []
         labels = []
-        while len(samples) == self.hparams.batch_size:
+        while len(samples) != self.hparams.batch_size:
             sample = next(self.read_txt_generator(self.hparams.mode == 'train'))
-            packed_sample = self.pack_one_sample(sample[0], sample[1])
-            samples.append(packed_sample[0])
-            labels.append(packed_sample[1])
-        batch = np.asarray(samples)
-        yield batch, labels
+            ids_sample, label, pad_sample, len_sample = self.pack_one_sample(sample[0], sample[1])
+            samples.append(ids_sample)
+            labels.append(label)
+            sample_pads.append([[1 if el == 1 else 0 for i in range(self.hparams.embed_dim)] for el in pad_sample])
+            sample_lens.append(len_sample)
+
+        batch = self.make_feeddict(samples, sample_pads, sample_lens)
+        return batch, labels
+
+    def make_feeddict(self, text, pad, lens):
+        feed = {
+            'enc_batch': np.asarray(text),
+            'enc_pad': np.asarray(pad),
+            'enc_len': np.asarray(lens)
+        }
+        return feed
 
     def read_txt_generator(self, is_train=True):
         while True:
             example = next(self.train_gen) if is_train else next(self.test_gen)
-            op_txt = example.features['text'].bytes_list.value[0].decode()
-            label_txt = None if 'label' not in example.features else example.features['label'].bytes_list.value[0].decode()
+            op_txt = example.features.feature['text'].bytes_list.value[0].decode()
+            label_txt = None if 'label' not in example.features.feature else \
+            example.features.feature['label'].bytes_list.value[0].decode()
             if label_txt is None: assert is_train
             yield (op_txt, label_txt)
 
