@@ -59,7 +59,7 @@ class Batcher:
         negative_sample_lens = []
         while len(samples) != self.hparams.batch_size:
             sample = next(self.read_txt_generator(self.hparams.mode == 'train' and not is_valid))
-            if len(sample[0].split()) < 1: continue
+            if len(sample[0].split()) <= 1: continue
             ids_sample, label, pad_sample, len_sample = self.pack_one_sample(sample[0], sample[1])
             samples.append(ids_sample)
             labels.append(label)
@@ -69,7 +69,7 @@ class Batcher:
         if self.hparams.mode == 'train':
             while len(negative_samples) != self.hparams.negative_samples * self.hparams.batch_size:
                 sample = next(self.read_negative_txt_generator(not is_valid))
-                if len(sample[0].split()) < 1: continue
+                if len(sample[0].split()) <= 1: continue
                 negative_ids_sample, _, negative_pad_sample, negative_len_sample = self.pack_one_sample(sample[0], sample[1])
                 negative_samples.append(negative_ids_sample)
                 negative_sample_pads.append([[1 if el == 1 else 0 for i in range(self.hparams.embed_dim)] for el in negative_pad_sample])
