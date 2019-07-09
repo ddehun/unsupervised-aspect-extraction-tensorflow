@@ -1,8 +1,6 @@
 import os
 import numpy as np
-from tqdm import tqdm
 from dataset import read_bin_generator
-from utils import Vocab
 
 
 def coherence_score(test_bin_fname, vocab, aspect_word_list, table_fname='./data/inverse_mat.npy'):
@@ -23,10 +21,6 @@ def coherence_score(test_bin_fname, vocab, aspect_word_list, table_fname='./data
                 cooccur_cnt = len(np.intersect1d(word1_occ_docs, word2_occ_docs))
                 score.append(np.log((cooccur_cnt + 1) / len(word2_occ_docs)))
     return sum(score) / len(score)
-
-
-def aspect_identification_with_labels():
-    pass
 
 
 def make_inverse_table(test_bin_fname, vocab, table_fname):
@@ -57,16 +51,4 @@ def make_inverse_table(test_bin_fname, vocab, table_fname):
     inverse_matrix = np.transpose(matrix)
     print(np.shape(inverse_matrix))
     np.save(table_fname, inverse_matrix)
-
-
-
-
-
-
-if __name__ == '__main__':
-    test_fname = './data/datasets/restaurant/parsed_test.bin'
-    vocab = Vocab('./data/vocab.txt')
-
-    table = make_inverse_table(test_fname, vocab)
-
 

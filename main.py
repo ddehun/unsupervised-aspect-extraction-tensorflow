@@ -7,7 +7,7 @@ from dataset import Vocab, Batcher
 from model import Model
 from utils import load_ckpt, GPU_config
 from Evaluation import coherence_score
-
+import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser()
 
@@ -23,7 +23,6 @@ parser.add_argument('--custom_embed_fname', type=str, default='./data/emb_matrx.
 
 # Experiments setting
 parser.add_argument('--mode', type=str, default='train', choices=['train','test'])
-
 parser.add_argument('--vocab_size', type=int, default=30000)
 parser.add_argument('--batch_size', type=int, default=64)
 parser.add_argument('--max_step', type=int, default=45000)
@@ -79,11 +78,18 @@ def main():
                     summary.value.add(tag='coherence_score_{}k'.format(args.near_K), simple_value=score)
                     valid_writer.add_summary(summary, step)
 
-
         else:
             load_ckpt(args.model_path, sess, model.saver)
-
-
+            score_vers_k = [[],[]]
+            for k in range(5,50,5):
+                score_vers_k[0].append(k)
+                near_ids, near_words = model.get_nearest_words(sess, args.near_K)
+                score = coherence_score(args.test_bin_fname, voca, near_ids)
+                score_vers_k[1].append(score)
+            plt.xlabel('Top N term')
+            plt.ylabel('Coherence Score')
+            plt.plot(score_vers_k)
+            plt.show()
 
 
 if __name__ == '__main__':

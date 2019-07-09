@@ -1,28 +1,9 @@
 import struct
-import os
 import numpy as np
-import tensorflow as tf
 from tensorflow.core.example import example_pb2
 from utils import Vocab
 import random
 
-
-def read_bin_generator(fname, single_pass=False):
-    """
-    Read binary file and yield data.
-    If single_pass is True, Iterating for dataset is done only once.
-    """
-    while True:
-        # Suppose there is only one binary
-        reader = open(fname, 'rb')
-        while True:
-            len_bytes = reader.read(8)
-            if not len_bytes: break
-            str_len = struct.unpack('q', len_bytes)[0]
-            example_str = struct.unpack('%ds' % str_len, reader.read(str_len))[0]
-            yield example_pb2.Example.FromString(example_str)
-        if single_pass:
-            return
 
 class Batcher:
     def __init__(self, vocab, hparams, single_pass=False):
@@ -110,6 +91,23 @@ class Batcher:
             label_txt = None
             yield (op_txt, label_txt)
 
+
+def read_bin_generator(fname, single_pass=False):
+    """
+    Read binary file and yield data.
+    If single_pass is True, Iterating for dataset is done only once.
+    """
+    while True:
+        # Suppose there is only one binary
+        reader = open(fname, 'rb')
+        while True:
+            len_bytes = reader.read(8)
+            if not len_bytes: break
+            str_len = struct.unpack('q', len_bytes)[0]
+            example_str = struct.unpack('%ds' % str_len, reader.read(str_len))[0]
+            yield example_pb2.Example.FromString(example_str)
+        if single_pass:
+            return
 
 
 if __name__ == '__main__':
