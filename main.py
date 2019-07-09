@@ -5,8 +5,7 @@ import tensorflow as tf
 from tqdm import trange
 from dataset import Vocab, Batcher
 from model import Model
-from utils import load_ckpt, GPU_config
-from Evaluation import coherence_score
+from utils import load_ckpt, GPU_config, coherence_score
 import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser()
