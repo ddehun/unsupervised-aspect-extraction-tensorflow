@@ -82,7 +82,7 @@ python main.py --mode=test
 
 2) Representative Words (sorted)
 
-| Aspect ID |      |
+| Aspect ID |   Words   |
 | --------- | ---- |
 | 1         |      |
 | 2         |      |
