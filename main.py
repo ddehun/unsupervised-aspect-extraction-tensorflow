@@ -24,7 +24,7 @@ parser.add_argument('--custom_embed_fname', type=str, default='./data/emb_matrx.
 parser.add_argument('--mode', type=str, default='train', choices=['train','test'])
 parser.add_argument('--vocab_size', type=int, default=30000)
 parser.add_argument('--batch_size', type=int, default=64)
-parser.add_argument('--max_step', type=int, default=45000)
+parser.add_argument('--max_step', type=int, default=65000)
 parser.add_argument('--embed_dim', type=int, default=200)
 parser.add_argument('--near_K', type=int, default=5)
 
@@ -32,7 +32,7 @@ parser.add_argument('--near_K', type=int, default=5)
 parser.add_argument('--lr', type=float, default=1e-3)
 parser.add_argument('--max_text_len', type=int, default=30)
 parser.add_argument('--aspect_num', type=int, default=15)
-parser.add_argument('--aspect_emb_scale', type=float, default=-0.5)
+parser.add_argument('--aspect_emb_scale', type=float, default=0.5)
 parser.add_argument('--penalty_weight', type=float, default=0.8)
 parser.add_argument('--negative_samples', type=int, default=20)
 args = parser.parse_args()
@@ -51,7 +51,7 @@ def main():
             sess.run(tf.global_variables_initializer())
             if not os.path.exists(args.train_logdir): os.makedirs(args.train_logdir)
             if not os.path.exists(args.valid_logdir): os.makedirs(args.valid_logdir)
-            train_writer, valid_writer = tf.summary.FileWriter(args.train_logdir), tf.summary.FileWriter(args.valid_logdir)
+            train_writer, valid_writer = tf.summary.FileWriter(args.train_logdir, sess.graph), tf.summary.FileWriter(args.valid_logdir, sess.graph)
 
             t = trange(args.max_step, leave=True)
             for i in t:

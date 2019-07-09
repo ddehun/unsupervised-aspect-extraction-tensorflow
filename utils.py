@@ -1,11 +1,28 @@
 import os
+import struct
 import numpy as np
 import tensorflow as tf
-from dataset import read_bin_generator
+from tensorflow.core.example import example_pb2
 
+
+def read_bin_generator(fname, single_pass=False):
+    """
+    Read binary file and yield data.
+    If single_pass is True, Iterating for dataset is done only once.
+    """
+    while True:
+        # Suppose there is only one binary
+        reader = open(fname, 'rb')
+        while True:
+            len_bytes = reader.read(8)
+            if not len_bytes: break
+            str_len = struct.unpack('q', len_bytes)[0]
+            example_str = struct.unpack('%ds' % str_len, reader.read(str_len))[0]
+            yield example_pb2.Example.FromString(example_str)
+        if single_pass:
+            return
 
 def load_ckpt(ckpt_dir, sess, saver):
-
     ckpt_state = tf.train.get_checkpoint_state(ckpt_dir)
     ckpt_path = ckpt_state.model_checkpoint_path
     saver.restore(sess, ckpt_path)
@@ -65,7 +82,7 @@ def make_inverse_table(test_bin_fname, vocab, table_fname):
         return np.load(table_fname)
     bin_gen = read_bin_generator(test_bin_fname, single_pass=True)
 
-    def read_txt_generator():
+    def read_simple_txt_generator():
         while True:
             example = next(bin_gen)
             op_txt = example.features.feature['text'].bytes_list.value[0].decode()
@@ -73,7 +90,7 @@ def make_inverse_table(test_bin_fname, vocab, table_fname):
 
     # [doc_num, vocab_size] matrix
     matrix = []
-    txt_gen = read_txt_generator()
+    txt_gen = read_simple_txt_generator()
     for doc in txt_gen:
         ids = [vocab.word2id[word] if word in vocab.words else vocab.unk_tok_id for word in doc.strip().split()]
         if len(ids) <= 1: continue
