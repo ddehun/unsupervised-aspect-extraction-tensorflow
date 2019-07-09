@@ -50,6 +50,7 @@ class Model:
 
         print("Add train op")
         self.add_train_op()
+        self.show_aspect_near_words()
 
         self.summaries = tf.summary.merge_all()
 
@@ -62,6 +63,7 @@ class Model:
         self.neg_text_input = tf.placeholder(tf.int32, [self.hparams.negative_samples*self.hparams.batch_size, self.hparams.max_text_len], name='neg_enc_batch')
         self.neg_text_pad_mask = tf.placeholder(tf.float32, [self.hparams.negative_samples*self.hparams.batch_size, self.hparams.max_text_len, self.hparams.embed_dim], name='neg_enc_pad')
         self.neg_text_len = tf.placeholder(tf.float32, [self.hparams.negative_samples*self.hparams.batch_size], name='neg_enc_len')
+        self.near_k = tf.placeholder_with_default(1, (), name='top_k_nearsest_word')
 
     def add_embedding(self):
         with tf.variable_scope('embedding'):
@@ -186,6 +188,11 @@ class Model:
         batch = self.make_feeddict(batch)
         return sess.run([self.loss, self.global_step, self.summaries], feed_dict=batch)
 
+    def get_nearest_words(self, sess, k):
+        near_ids = sess.run(self.top_ids, feed_dict={self.near_k: k})
+        near_words = {idx: [self.vocab.id2word[id_] for id_ in word_ids] for idx, word_ids in enumerate(near_ids)}
+        return near_ids, near_words
+
     def make_feeddict(self, batch):
         feed = {
             self.text_input: batch['enc_batch'],
@@ -198,5 +205,9 @@ class Model:
         return feed
 
     def show_aspect_near_words(self):
-        # TODO
-        pass
+        norm_aspect_emb = tf.nn.l2_normalize(self.aspect_matrix)
+        norm_word_emb = tf.nn.l2_normalize(self.embedding_matrix)
+
+        sim_matrix = tf.matmul(norm_aspect_emb, norm_word_emb, transpose_b=True)
+        top_val, self.top_ids = tf.nn.top_k(sim_matrix, self.near_k)
+

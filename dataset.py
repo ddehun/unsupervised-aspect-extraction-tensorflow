@@ -13,6 +13,7 @@ def read_bin_generator(fname, single_pass=False):
     If single_pass is True, Iterating for dataset is done only once.
     """
     while True:
+        # Suppose there is only one binary
         reader = open(fname, 'rb')
         while True:
             len_bytes = reader.read(8)
@@ -20,17 +21,17 @@ def read_bin_generator(fname, single_pass=False):
             str_len = struct.unpack('q', len_bytes)[0]
             example_str = struct.unpack('%ds' % str_len, reader.read(str_len))[0]
             yield example_pb2.Example.FromString(example_str)
-            if single_pass:
-                break
+        if single_pass:
+            return
 
 class Batcher:
-    def __init__(self, vocab, hparams):
+    def __init__(self, vocab, hparams, single_pass=False):
         self.hparams = hparams
         self.vocab = vocab
-        self.train_gen = read_bin_generator(self.hparams.train_bin_fname)
-        self.negative_train_gen = read_bin_generator(self.hparams.train_bin_fname)
-        self.test_gen = read_bin_generator(self.hparams.test_bin_fname)
-        self.negative_test_gen = read_bin_generator(self.hparams.test_bin_fname)
+        self.train_gen = read_bin_generator(self.hparams.train_bin_fname, single_pass)
+        self.negative_train_gen = read_bin_generator(self.hparams.train_bin_fname, single_pass)
+        self.test_gen = read_bin_generator(self.hparams.test_bin_fname, single_pass)
+        self.negative_test_gen = read_bin_generator(self.hparams.test_bin_fname, single_pass)
 
     def pack_one_sample(self, review_txt, label_txt):
         assert isinstance(review_txt, str) and (isinstance(label_txt, str) or label_txt is None)
@@ -103,7 +104,7 @@ class Batcher:
         assert self.hparams.mode == 'train'
         while True:
             # negative random sampling implementation strategy
-            for _ in range(random.randint(50, 80)):
+            for _ in range(random.randint(10, 30)):
                 example = next(self.negative_train_gen) if read_train else next(self.negative_test_gen)
             op_txt = example.features.feature['text'].bytes_list.value[0].decode()
             label_txt = None
@@ -120,5 +121,7 @@ if __name__ == '__main__':
     print(next(gen))
     print(next(test_gen))
     vocab = Vocab('./data/vocab.txt')
+
+
 
 

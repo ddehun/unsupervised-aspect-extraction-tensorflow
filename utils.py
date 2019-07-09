@@ -19,6 +19,8 @@ class Vocab:
         self.word2id, self.id2word, self.words = self.build_ids(vocab_fname)
         self.unk_tok_id = self.word2id['<UNK>']
         self.pad_tok_id = self.word2id['<PAD>']
+        self.words.extend(['<UNK>', '<PAD>'])
+        self.vocab_size = len(self.words)
 
     def build_ids(self, vocab_fname):
         w2i, i2w = dict(), dict()
