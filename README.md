@@ -1,4 +1,4 @@
-# Unsupervised_aspect_extraction_tensorflow
+# Unsupervised-aspect-extraction-tensorflow
 - Tensorflow reimplementation of ACL 2017 paper "An Unsupervised Neural Attention Model for Aspect Extraction"[(pdf)](http://aclweb.org/anthology/P/P17/P17-1036.pdf)  for practice.
 
 
