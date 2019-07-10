@@ -140,7 +140,6 @@ class Model:
         # [batch_size, embed_dim]
         self.reconstruct_sent = tf.matmul(self.aspect_prob, self.aspect_matrix)
 
-
     def add_penalize_term(self):
         """
         Penalize the aspect matrix to avoid redundant aspects.
@@ -169,13 +168,14 @@ class Model:
         """
         Reconstruction loss calculation by hinge loss with negative sample embedding.
         """
-        tiled_recons = tf.tile(self.reconstruct_sent, [self.hparams.negative_samples, 1])
-        tiled_sent_repr = tf.tile(self.sent_repr, [self.hparams.negative_samples, 1])
+        # shape [batch_size, 1]
+        positive_loss = tf.diag_part(tf.matmul(self.reconstruct_sent, self.sent_repr, transpose_b=True))
 
-        # (batch_size * negative_sample_size)
-        positive_loss = tf.reduce_sum(tiled_recons * tiled_sent_repr, axis=1)
+        positive_loss = tf.reshape(tf.tile(tf.expand_dims(positive_loss, 1), [1, self.hparams.negative_samples]), (-1,1))
 
-        negative_loss = tf.reduce_sum(tiled_recons * self.neg_embed_avg, axis=1)
+        tiled_recons = tf.reshape(tf.tile(self.reconstruct_sent, [1, self.hparams.negative_samples]), [-1, self.hparams.embed_dim])
+
+        negative_loss = tf.diag_part(tf.matmul(tiled_recons, self.neg_embed_avg, transpose_b=True))
 
         hinge_loss = tf.reduce_sum(tf.maximum(0., 1. - positive_loss + negative_loss))
         return hinge_loss
