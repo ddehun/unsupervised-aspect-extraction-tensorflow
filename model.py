@@ -149,13 +149,13 @@ class Model:
         Penalize the aspect matrix to avoid redundant aspects.
         """
         # Normalized aspect embedding
-
-        normalized_aspect_matrix = self.aspect_matrix / tf.norm(self.aspect_matrix + 1e-12, axis=1)
+        self.aspect_matrix += 1e-12
+        normalized_aspect_matrix = self.aspect_matrix / tf.expand_dims(tf.norm(self.aspect_matrix, axis=1), axis=1)
 
         TT_T = tf.matmul(normalized_aspect_matrix, tf.transpose(normalized_aspect_matrix, [1, 0]))
         I = tf.eye(self.hparams.aspect_num)
 
-        self.penalty_term = tf.square(tf.norm(TT_T - I + 1e-12, axis=[-2, -1], ord='fro'))
+        self.penalty_term = tf.square(tf.norm(TT_T - I, axis=[-2, -1], ord='fro'))
         tf.summary.scalar('penalty', self.penalty_term)
 
     def add_train_op(self):
