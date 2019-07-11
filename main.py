@@ -22,15 +22,16 @@ parser.add_argument('--custom_embed_fname', type=str, default='./data/emb_matrx.
 
 # Experiments setting
 parser.add_argument('--mode', type=str, default='train', choices=['train','test'])
-parser.add_argument('--vocab_size', type=int, default=30000)
+parser.add_argument('--vocab_size', type=int, default=8000)
 parser.add_argument('--batch_size', type=int, default=64)
 parser.add_argument('--max_step', type=int, default=65000)
 parser.add_argument('--embed_dim', type=int, default=200)
 parser.add_argument('--near_K', type=int, default=5)
+parser.add_argument('--min_word_cnt', type=int, default=10)
 
 # Neural net model related
 parser.add_argument('--lr', type=float, default=1e-3)
-parser.add_argument('--max_text_len', type=int, default=30)
+parser.add_argument('--max_text_len', type=int, default=20)
 parser.add_argument('--aspect_num', type=int, default=15)
 parser.add_argument('--aspect_emb_scale', type=float, default=0.5)
 parser.add_argument('--penalty_weight', type=float, default=0.8)

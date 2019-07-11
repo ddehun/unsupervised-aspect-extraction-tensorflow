@@ -1,3 +1,4 @@
+import re
 import os
 import struct
 import numpy as np
@@ -27,6 +28,12 @@ def load_ckpt(ckpt_dir, sess, saver):
     ckpt_path = ckpt_state.model_checkpoint_path
     saver.restore(sess, ckpt_path)
 
+
+def is_num(tok):
+    num_regex = re.compile('^[+-]?[0-9]+\.?[0-9]*$')
+    return bool(num_regex.match(tok))
+
+
 def GPU_config():
     config = tf.ConfigProto(allow_soft_placement=True)
     config.gpu_options.allow_growth = True
@@ -38,7 +45,7 @@ class Vocab:
         self.word2id, self.id2word, self.words = self.build_ids(vocab_fname)
         self.unk_tok_id = self.word2id['<UNK>']
         self.pad_tok_id = self.word2id['<PAD>']
-        self.words.extend(['<UNK>', '<PAD>'])
+        assert '<NUM>' in self.words and '<NUM>' in self.word2id.keys()
         self.vocab_size = len(self.words)
 
     def build_ids(self, vocab_fname):
@@ -101,3 +108,4 @@ def make_inverse_table(test_bin_fname, vocab, table_fname):
     inverse_matrix = np.transpose(matrix)
     print(np.shape(inverse_matrix))
     np.save(table_fname, inverse_matrix)
+    return inverse_matrix

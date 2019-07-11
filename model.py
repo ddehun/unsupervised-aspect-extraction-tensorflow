@@ -68,7 +68,7 @@ class Model:
     def add_embedding(self):
         with tf.variable_scope('embedding'):
             matrix = build_embed_matrix(self.vocab, self.hparams.glove_matrix_fname, self.hparams.custom_embed_fname, self.hparams.embed_dim)
-            self.embedding_matrix = tf.Variable(matrix, trainable=True)
+            self.embedding_matrix = tf.Variable(matrix, trainable=True, dtype=tf.float32)
 
             # [batch_size, max_len, embed_dim]
             self.embed_output = tf.nn.embedding_lookup(self.embedding_matrix, self.text_input)
@@ -127,6 +127,8 @@ class Model:
         attn_dist *= tf.reduce_mean(self.text_pad_mask, 2)  # Set attention weight of <PAD> token to be zero.
         self.attn_dist = attn_dist / tf.reshape(tf.reduce_sum(attn_dist, 1), [-1, 1])  # Re-normalize the attention distribution.
 
+        attn_dist += 1e-12
+
         # Weighted sum of word embedding with attention distribution.
         self.sent_repr = tf.reduce_sum(self.pad_embed_output * tf.expand_dims(self.attn_dist, axis=2), 1)
 
@@ -137,6 +139,8 @@ class Model:
         # [batch_size, aspect_num]
         self.aspect_prob = tf.nn.softmax(tf.matmul(self.sent_repr, weight) + bias)
 
+        self.aspect_prob += 1e-12
+
         # [batch_size, embed_dim]
         self.reconstruct_sent = tf.matmul(self.aspect_prob, self.aspect_matrix)
 
@@ -145,12 +149,13 @@ class Model:
         Penalize the aspect matrix to avoid redundant aspects.
         """
         # Normalized aspect embedding
-        normalized_aspect_matrix = self.aspect_matrix / tf.reduce_sum(self.aspect_matrix, 1, keep_dims=True)
+
+        normalized_aspect_matrix = self.aspect_matrix / tf.norm(self.aspect_matrix + 1e-12, axis=1)
 
         TT_T = tf.matmul(normalized_aspect_matrix, tf.transpose(normalized_aspect_matrix, [1, 0]))
         I = tf.eye(self.hparams.aspect_num)
 
-        self.penalty_term = tf.square(tf.norm(TT_T - I, axis=[-2, -1], ord='fro'))
+        self.penalty_term = tf.square(tf.norm(TT_T - I + 1e-12, axis=[-2, -1], ord='fro'))
         tf.summary.scalar('penalty', self.penalty_term)
 
     def add_train_op(self):

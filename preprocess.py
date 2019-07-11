@@ -1,13 +1,26 @@
-import os, struct
+import re
+import os
+import struct
 import collections
 from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+from nltk.stem.wordnet import WordNetLemmatizer
 from tensorflow.core.example import example_pb2
-import tensorflow as tf
+from utils import is_num
 
 
 """
 Preprocessing script file
 """
+
+
+def tokenize_sent(sent, lemtzr, stopword):
+    tokens = tokenize(sent.strip().lower())
+    tokens = re.sub(r'[^A-Za-z0-9]+',' ', ' '.join(tokens))
+    tokens = [tok for tok in tokens.split() if tok not in stopword]
+    tokens = [tok if not is_num(tok) else '<NUM>' for tok in tokens]
+    tokens = [lemtzr.lemmatize(tok) for tok in tokens]
+    return tokens
 
 
 def tokenize_train_file(fname):
@@ -20,7 +33,14 @@ def tokenize_train_file(fname):
 
     with open(fname, 'r', encoding='utf8') as f:
         ls = f.readlines()
-    parsed_data = [[tok.lower() for tok in tokenize(line.strip())] for line in ls]
+
+    parsed_data = []
+    lemtzr = WordNetLemmatizer()
+    stopword = stopwords.words('english')
+
+    for line in ls:
+        tokens = tokenize_sent(line, lemtzr, stopword)
+        parsed_data.append(tokens)
 
     save_file(parsed_data, new_fname)
     return new_fname
@@ -38,7 +58,13 @@ def tokenize_labeled_test_file(fname, label_fname):
     with open(fname, 'r', encoding='utf8') as f1, open(label_fname, 'r', encoding='utf8') as f2:
         ls1, ls2 = f1.readlines(), f2.readlines()
 
-    parsed_data = [[tok.lower() for tok in tokenize(line.strip())] for line in ls1]
+    parsed_data = []
+    lemtzr = WordNetLemmatizer()
+    stopword = stopwords.words('english')
+
+    for line in ls1:
+        tokens = tokenize_sent(line, lemtzr, stopword)
+        parsed_data.append(tokens)
 
     assert len(ls1) == len(ls2) == len(parsed_data)
 
@@ -61,7 +87,7 @@ def tokenize_labeled_test_file(fname, label_fname):
         label_map[label] = idx
     with open(label_map_fname, 'w') as f:
         for key,val in label_map.items():
-            f.write("{} ||| {}".format(key, val))
+            f.write("{}  {} ||| ".format(key, val))
 
     for idx, data in enumerate(parsed_data):
         labels = ls2[idx].strip().split()
@@ -89,8 +115,18 @@ def build_vocab(parsed_train_fname, vocab_file, vocab_size=30000):
     with open(parsed_train_fname, 'r', encoding='utf8') as f:
         ls = f.readlines()
         tokens = [tok for line in ls for tok in line.strip().split()]
-    counts = collections.Counter(tokens)
-    vocab = sorted(counts, key=lambda x: -counts[x])[:vocab_size - 2]
+    counts = dict(collections.Counter(tokens))
+
+    import operator
+    vocab = sorted(counts.items(), key=operator.itemgetter(1), reverse=True)
+    print("TOTAL VOCAB SIZE: {}".format(len(vocab)))
+
+    for idx,tok in enumerate(vocab):
+        if tok[1] <= 10:
+            print("WORDS MORE THAN 10: {}".format(idx))
+            break
+    vocab = [tok[0] for tok in vocab][:idx]
+
     vocab.append('<UNK>')
     vocab.append('<PAD>')
 
