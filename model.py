@@ -6,7 +6,7 @@ import tensorflow as tf
 def build_embed_matrix(vocab, glove_path, custom_embed_path, dim):
     if os.path.exists(custom_embed_path):
         print("Already constructed matrix")
-        matrix = np.load(custom_embed_path).astype(np.float32)
+        matrix = np.load(custom_embed_path).astype(np.float64)
         return matrix
     else:
         matrix = []
@@ -24,7 +24,7 @@ def build_embed_matrix(vocab, glove_path, custom_embed_path, dim):
             else:
                 rand_var = np.random.normal(size=dim)
                 matrix.append(rand_var)
-        matrix = np.asarray(matrix)
+        matrix = np.asarray(matrix).astype(np.float64)
         np.save(custom_embed_path, matrix)
         return matrix
 
@@ -38,7 +38,7 @@ class Model:
         print("build graph start")
         self.add_placeholder()
         self.uniform_initializer = tf.random_uniform_initializer(-self.hparams.aspect_emb_scale,
-                                                                 self.hparams.aspect_emb_scale, seed=777)
+                                                                 self.hparams.aspect_emb_scale, dtype=tf.float64, seed=777)
 
         self.global_step = tf.Variable(0, name='global_step', trainable=False)
 
@@ -58,17 +58,17 @@ class Model:
 
     def add_placeholder(self):
         self.text_input = tf.placeholder(tf.int32, [self.hparams.batch_size, self.hparams.max_text_len], name='enc_batch')
-        self.text_pad_mask = tf.placeholder(tf.float32, [self.hparams.batch_size, self.hparams.max_text_len, self.hparams.embed_dim], name='enc_pad')
-        self.text_len = tf.placeholder(tf.float32, [self.hparams.batch_size], name='enc_len')
+        self.text_pad_mask = tf.placeholder(tf.float64, [self.hparams.batch_size, self.hparams.max_text_len, self.hparams.embed_dim], name='enc_pad')
+        self.text_len = tf.placeholder(tf.float64, [self.hparams.batch_size], name='enc_len')
         self.neg_text_input = tf.placeholder(tf.int32, [self.hparams.negative_samples*self.hparams.batch_size, self.hparams.max_text_len], name='neg_enc_batch')
-        self.neg_text_pad_mask = tf.placeholder(tf.float32, [self.hparams.negative_samples*self.hparams.batch_size, self.hparams.max_text_len, self.hparams.embed_dim], name='neg_enc_pad')
-        self.neg_text_len = tf.placeholder(tf.float32, [self.hparams.negative_samples*self.hparams.batch_size], name='neg_enc_len')
+        self.neg_text_pad_mask = tf.placeholder(tf.float64, [self.hparams.negative_samples*self.hparams.batch_size, self.hparams.max_text_len, self.hparams.embed_dim], name='neg_enc_pad')
+        self.neg_text_len = tf.placeholder(tf.float64, [self.hparams.negative_samples*self.hparams.batch_size], name='neg_enc_len')
         self.near_k = tf.placeholder_with_default(1, (), name='top_k_nearsest_word')
 
     def add_embedding(self):
         with tf.variable_scope('embedding'):
             matrix = build_embed_matrix(self.vocab, self.hparams.glove_matrix_fname, self.hparams.custom_embed_fname, self.hparams.embed_dim)
-            self.embedding_matrix = tf.Variable(matrix, trainable=True, dtype=tf.float32)
+            self.embedding_matrix = tf.Variable(matrix, trainable=True, dtype=tf.float64)
 
             # [batch_size, max_len, embed_dim]
             self.embed_output = tf.nn.embedding_lookup(self.embedding_matrix, self.text_input)
@@ -84,7 +84,7 @@ class Model:
 
             # [aspect_num, embed_dim]
             self.aspect_matrix = tf.get_variable('aspect_emb', [self.hparams.aspect_num, self.hparams.embed_dim],
-                                                    initializer=self.uniform_initializer)
+                                                 dtype=tf.float64, initializer=self.uniform_initializer)
 
             # Below is for negative sample word embedding
             # [negative_sample_size * batch_size, max_len, embed_dim]
@@ -113,7 +113,7 @@ class Model:
         """
 
         # Matrix to calculate attention score between global context(avg. of word embedding for sentence) and each word
-        matrix1 = tf.get_variable('m1', [self.hparams.embed_dim, self.hparams.embed_dim], initializer=self.uniform_initializer)
+        matrix1 = tf.get_variable('m1', [self.hparams.embed_dim, self.hparams.embed_dim], dtype=tf.float64, initializer=self.uniform_initializer)
 
         # [batch_size, word_dim, 1]
         tmp1 = tf.expand_dims(tf.transpose(tf.matmul(matrix1, self.embed_avg, transpose_b=True)),2)
@@ -133,8 +133,8 @@ class Model:
         self.sent_repr = tf.reduce_sum(self.pad_embed_output * tf.expand_dims(self.attn_dist, axis=2), 1)
 
     def reconstruct(self):
-        weight = tf.get_variable('w1', [self.hparams.embed_dim, self.hparams.aspect_num], initializer=self.uniform_initializer)
-        bias = tf.get_variable('b1', [self.hparams.aspect_num], initializer=self.uniform_initializer)
+        weight = tf.get_variable('w1', [self.hparams.embed_dim, self.hparams.aspect_num], dtype=tf.float64, initializer=self.uniform_initializer)
+        bias = tf.get_variable('b1', [self.hparams.aspect_num], dtype=tf.float64, initializer=self.uniform_initializer)
 
         # [batch_size, aspect_num]
         self.aspect_prob = tf.nn.softmax(tf.matmul(self.sent_repr, weight) + bias)
@@ -149,25 +149,13 @@ class Model:
         Penalize the aspect matrix to avoid redundant aspects.
         """
         # Normalized aspect embedding
-        self.aspect_matrix += 1e-12
-        normalized_aspect_matrix = self.aspect_matrix / tf.expand_dims(tf.norm(self.aspect_matrix, axis=1), axis=1)
+        normalized_aspect_matrix = self.aspect_matrix / tf.expand_dims(tf.norm(self.aspect_matrix + 1e-12, axis=1), axis=1)
 
         TT_T = tf.matmul(normalized_aspect_matrix, tf.transpose(normalized_aspect_matrix, [1, 0]))
-        I = tf.eye(self.hparams.aspect_num)
+        I = tf.eye(self.hparams.aspect_num, dtype=tf.float64)
 
-        self.penalty_term = tf.square(tf.norm(TT_T - I, axis=[-2, -1], ord='fro'))
+        self.penalty_term = tf.square(tf.norm(TT_T - I + 1e-12, axis=[-2, -1], ord='fro')) + 1e-12
         tf.summary.scalar('penalty', self.penalty_term)
-
-    def add_train_op(self):
-        optimizer = tf.train.AdamOptimizer(learning_rate=self.hparams.lr)
-
-        self.reconstruction_loss = self.calc_recons_loss()
-        tf.summary.scalar('recons_loss', self.reconstruction_loss)
-
-        self.loss = self.reconstruction_loss + self.hparams.penalty_weight * self.penalty_term
-        tf.summary.scalar('loss', self.loss)
-
-        self.op = optimizer.minimize(self.loss, self.global_step)
 
     def calc_recons_loss(self):
         """
@@ -182,8 +170,27 @@ class Model:
 
         negative_loss = tf.diag_part(tf.matmul(tiled_recons, self.neg_embed_avg, transpose_b=True))
 
-        hinge_loss = tf.reduce_sum(tf.maximum(0., 1. - positive_loss + negative_loss))
+        hinge_loss = tf.reduce_sum(tf.maximum(tf.constant(0.0, dtype=tf.float64), 1. - positive_loss + negative_loss)) + 1e-12
         return hinge_loss
+
+    def add_train_op(self):
+        optimizer = tf.train.AdamOptimizer(learning_rate=self.hparams.lr)
+
+        self.reconstruction_loss = self.calc_recons_loss()
+        tf.summary.scalar('recons_loss', self.reconstruction_loss)
+
+        self.loss = self.reconstruction_loss + self.hparams.penalty_weight * self.penalty_term
+        tf.summary.scalar('loss', self.loss)
+        tvars = tf.trainable_variables()
+
+        gradients = tf.gradients(
+            self.loss, tvars, aggregation_method=tf.AggregationMethod.EXPERIMENTAL_TREE)
+
+        grad, grad_norm = tf.clip_by_global_norm(gradients, self.hparams.max_grad_norm)
+
+        tf.summary.scalar('global_norm', grad_norm)
+
+        self.op = optimizer.apply_gradients(zip(grad, tvars), global_step=self.global_step)
 
     def run_train_step(self, batch, sess):
         batch = self.make_feeddict(batch)
