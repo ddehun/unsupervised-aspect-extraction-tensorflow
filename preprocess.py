@@ -16,15 +16,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--dataset', type=str, choices=['restaurant', 'beer'], default='restaurant')
 parser.add_argument('--vocab_fname', type=str, default='./data/vocab.txt')
 
-# Experiments setting
-parser.add_argument('--mode', type=str, default='train', choices=['train','test'])
-parser.add_argument('--vocab_size', type=int, default=8000)
-parser.add_argument('--batch_size', type=int, default=50)
-parser.add_argument('--max_step', type=int, default=65000)
-parser.add_argument('--embed_dim', type=int, default=200)
-parser.add_argument('--near_K', type=int, default=5)
-parser.add_argument('--min_word_cnt', type=int, default=10)
-
 args = parser.parse_args()
 
 """

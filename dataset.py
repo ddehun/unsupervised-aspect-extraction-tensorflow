@@ -87,20 +87,3 @@ class Batcher:
             op_txt = example.features.feature['text'].bytes_list.value[0].decode()
             label_txt = None
             yield (op_txt, label_txt)
-
-
-
-
-if __name__ == '__main__':
-    train_fname = './data/datasets/restaurant/parsed_train.bin'
-    test_fname = './data/datasets/restaurant/parsed_test.bin'
-
-    gen = read_bin_generator(train_fname)
-    test_gen = read_bin_generator(test_fname)
-    print(next(gen))
-    print(next(test_gen))
-    vocab = Vocab('./data/vocab.txt')
-
-
-
-
