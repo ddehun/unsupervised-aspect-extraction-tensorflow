@@ -1,6 +1,7 @@
 import re
 import os
 import struct
+import argparse
 import collections
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
@@ -8,6 +9,23 @@ from nltk.stem.wordnet import WordNetLemmatizer
 from tensorflow.core.example import example_pb2
 from utils import is_num
 
+
+parser = argparse.ArgumentParser()
+
+# Path
+parser.add_argument('--dataset', type=str, choices=['restaurant', 'beer'], default='restaurant')
+parser.add_argument('--vocab_fname', type=str, default='./data/vocab.txt')
+
+# Experiments setting
+parser.add_argument('--mode', type=str, default='train', choices=['train','test'])
+parser.add_argument('--vocab_size', type=int, default=8000)
+parser.add_argument('--batch_size', type=int, default=50)
+parser.add_argument('--max_step', type=int, default=65000)
+parser.add_argument('--embed_dim', type=int, default=200)
+parser.add_argument('--near_K', type=int, default=5)
+parser.add_argument('--min_word_cnt', type=int, default=10)
+
+args = parser.parse_args()
 
 """
 Preprocessing script file
@@ -161,7 +179,7 @@ def make_binary_dataset(fname, is_label=False):
         ls = f.readlines()
         data = [line.strip() for line in ls]
 
-    assert all(['|||'  in dat for dat in data]) if is_label else all(['|||'  not in dat for dat in data])
+    assert all(['|||' in dat for dat in data]) if is_label else all(['|||'  not in dat for dat in data])
 
     with open(binary_fname, 'wb') as f:
         for line in data:
@@ -183,14 +201,15 @@ def make_binary_dataset(fname, is_label=False):
 
 
 def main():
-    train_fname = './data/datasets/restaurant/train.txt'
-    test_fname = './data/datasets/restaurant/test.txt'
-    test_label_fname = './data/datasets/restaurant/test_label.txt'
+    train_fname = './data/datasets/{}/train.txt'.format(args.dataset)
+    test_fname = './data/datasets/{}/test.txt'.format(args.dataset)
+    test_label_fname = './data/datasets/{}/test_label.txt'.format(args.dataset)
     vocab_fname = './data/vocab.txt'
+    vocab_size = args.vocab_size
 
     parsed_train_fname = tokenize_train_file(train_fname)
     label_map, parsed_test_fname = tokenize_labeled_test_file(test_fname, test_label_fname)
-    build_vocab(parsed_train_fname, vocab_fname)
+    build_vocab(parsed_train_fname, vocab_fname, vocab_size=vocab_size)
 
     make_binary_dataset(parsed_train_fname, False)
     make_binary_dataset(parsed_test_fname, True)

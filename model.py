@@ -155,6 +155,7 @@ class Model:
         I = tf.eye(self.hparams.aspect_num, dtype=tf.float64)
 
         self.penalty_term = tf.square(tf.norm(TT_T - I + 1e-12, axis=[-2, -1], ord='fro')) + 1e-12
+        self.penalty_term = tf.where(tf.is_nan(self.penalty_term), tf.constant(1.0, dtype=tf.float64), self.penalty_term)
         tf.summary.scalar('penalty', self.penalty_term)
 
     def calc_recons_loss(self):
