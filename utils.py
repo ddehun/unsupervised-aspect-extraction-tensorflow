@@ -23,10 +23,11 @@ def read_bin_generator(fname, single_pass=False):
         if single_pass:
             return
 
+
 def load_ckpt(ckpt_dir, sess, saver):
-    ckpt_state = tf.train.get_checkpoint_state(ckpt_dir)
-    ckpt_path = ckpt_state.model_checkpoint_path
-    saver.restore(sess, ckpt_path)
+    # Latest checkpoint for default
+    ckpt_state = tf.train.get_checkpoint_state(ckpt_dir).all_model_checkpoint_paths[-1]
+    saver.restore(sess, ckpt_state)
 
 
 def is_num(tok):

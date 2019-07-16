@@ -70,35 +70,27 @@ python main.py --mode=test
 
 |  K   | Coherence Score |
 | :--: | :-------------: |
-|  5   |                 |
-|  10  |                 |
-|  15  |                 |
-|  20  |                 |
-|  25  |                 |
-|  30  |                 |
-|  35  |                 |
-|  40  |                 |
-|  45  |                 |
+|  5   |     -7.3815     |
 
 2) Representative Words (sorted)
 
 | Aspect ID |   Words   |
 | --------- | ---- |
-| 1         |      |
-| 2         |      |
-| 3         |      |
-| 4         |      |
-| 5         |      |
-| 6         |      |
-| 7         |      |
-| 8         |      |
-| 9         |      |
-| 10        |      |
-| 11        |      |
-| 12        |      |
-| 13        |      |
-| 14        |      |
-| 15        |      |
+| 1         | lombardis dissapointing coffe flautas geido |
+| 2         | recomment bannana loungy arugala bottomless |
+| 3         | cheescake veniero saganaki trully ideya |
+| 4         | wondee disapointment bernaise housemade curtious |
+| 5         | 30pm 00pm deliscious omlettes goal |
+| 6         | pleasent carnivorous brushetta bouterin servce |
+| 7         | 30pm atmostphere shortribs suace cannolis |
+| 8         | margharitas prixe amzing gnudi chikalicious |
+| 9         | <PAD> imho overated poetry genre |
+| 10        | parmesean fusia accomadating molyvos tabouleh |
+| 11        | kababs octupus shortribs foccacia higly |
+| 12        | kittichai markjoseph aweful oversalted soccer |
+| 13        | barmarche ofcourse sauted waitperson negimaki |
+| 14        | waittress peices phenominal ramblas sandwhich |
+| 15        | moqueca pampano perbacco absolutly dissappointing |
 
 
 
@@ -107,6 +99,7 @@ python main.py --mode=test
 - Aspect identification evaluation metric based on labeled dataset
 - Hyperparameter tuning
 - Aspect embedding matrix initialization with k-means algorithm like original paper
+- NaN issue at 35k step
 
 
 

@@ -6,7 +6,6 @@ from tqdm import trange
 from dataset import Vocab, Batcher
 from model import Model
 from utils import load_ckpt, GPU_config, coherence_score
-import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser()
 
@@ -19,12 +18,13 @@ parser.add_argument('--train_logdir', type=str, default='./model/logdir/train/')
 parser.add_argument('--valid_logdir', type=str, default='./model/logdir/valid/')
 parser.add_argument('--glove_matrix_fname', type=str, default='./data/glove.6B.200d.txt')
 parser.add_argument('--custom_embed_fname', type=str, default='./data/emb_matrx.npy')
+parser.add_argument('--nearword_fname', type=str, default='./data/near_words.txt')
 
 # Experiments setting
 parser.add_argument('--mode', type=str, default='train', choices=['train','test'])
 parser.add_argument('--vocab_size', type=int, default=8000)
 parser.add_argument('--batch_size', type=int, default=50)
-parser.add_argument('--max_step', type=int, default=65000)
+parser.add_argument('--max_step', type=int, default=30000)
 parser.add_argument('--embed_dim', type=int, default=200)
 parser.add_argument('--near_K', type=int, default=5)
 parser.add_argument('--min_word_cnt', type=int, default=10)
@@ -81,16 +81,22 @@ def main():
 
         else:
             load_ckpt(args.model_path, sess, model.saver)
-            score_vers_k = [[],[]]
+            near_words_dict = {i:[] for i in range(args.aspect_num)}
             for k in range(5,50,5):
-                score_vers_k[0].append(k)
-                near_ids, near_words = model.get_nearest_words(sess, args.near_K)
+                near_ids, near_words = model.get_nearest_words(sess, k)
                 score = coherence_score(args.test_bin_fname, voca, near_ids)
-                score_vers_k[1].append(score)
-            plt.xlabel('Top N term')
-            plt.ylabel('Coherence Score')
-            plt.plot(score_vers_k)
-            plt.show()
+                print(k, score)
+                for asp_idx in near_words:
+                    for word in near_words[asp_idx]:
+                        if word not in near_words_dict[asp_idx]:
+                            near_words_dict[asp_idx].append(word)
+
+            with open(args.nearword_fname, 'w') as f:
+                for idx in range(len(list(near_words_dict.keys()))):
+                    print(near_words_dict[idx])
+                    f.write(str(idx) + '   ')
+                    f.write(' '.join(near_words_dict[idx][:5]))
+                    f.write('\n')
 
 
 if __name__ == '__main__':
