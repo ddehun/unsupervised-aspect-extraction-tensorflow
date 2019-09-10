@@ -15,7 +15,7 @@ parser = argparse.ArgumentParser()
 # Path
 parser.add_argument('--dataset', type=str, choices=['restaurant', 'beer'], default='restaurant')
 parser.add_argument('--vocab_fname', type=str, default='./data/vocab.txt')
-
+parser.add_argument('--vocab_size', type=int, default=8000)
 args = parser.parse_args()
 
 """

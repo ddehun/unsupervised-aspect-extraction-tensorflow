@@ -43,7 +43,7 @@
 
 ```
 mkdir data
-# Decompress the review dataset into here.
+# Decompress the unpreprocessed review dataset into here.
 # Put in the 'glove.6B.200d.txt' file here.
 python preprocess.py --dataset=[restaurant, beer]
 ```
